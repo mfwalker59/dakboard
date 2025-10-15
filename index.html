@@ -1,158 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Family 2-Week Calendar</title>
-<style>
-  body {
-    background: transparent;
-    font-family: "Helvetica Neue", sans-serif;
-    color: white;
-    margin: 0;
-    padding: 20px;
-  }
-  h2 {
-    text-align: center;
-    font-weight: 300;
-    margin-bottom: 15px;
-    font-size: 36px;
-  }
-
-  /* Calendar grid */
-  .calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-auto-rows: 1fr;
-    gap: 10px;
-  }
-
-  .day {
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 6px;
-    padding: 8px;
-    background: rgba(255,255,255,0.05);
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    min-height: 250px;
-  }
-
-  .date {
-    font-size: 20px;
-    font-weight: 500;
-    margin-bottom: 8px;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    padding-bottom: 4px;
-  }
-
-  .event {
-    font-size: 16px;
-    margin-bottom: 4px;
-    border-left: 4px solid transparent;
-    padding-left: 4px;
-    line-height: 1.2;
-  }
-
-  /* Family member colors */
-  .mom { border-color: #ff99c8; }
-  .dad { border-color: #99c9ff; }
-  .callan { border-color: #ffd166; }
-  .maren { border-color: #06d6a0; }
-  .default { border-color: #cccccc; }
-
-  /* Weekday header */
-  .weekday-header {
-    grid-column: span 7;
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    text-align: center;
-    font-weight: 500;
-    margin-bottom: 6px;
-    opacity: 0.9;
-  }
-
-  .weekday-header div {
-    font-size: 18px;
-    letter-spacing: 0.5px;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Family 2-Week Calendar</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f8fafc;
+      margin: 0;
+      padding: 1rem;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-auto-rows: 1fr;
+      gap: 0.75rem;
+    }
+    .day {
+      background: #fff;
+      border-radius: 10px;
+      padding: 0.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      height: 180px;
+    }
+    .date {
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+    .event {
+      font-size: 0.85rem;
+      margin: 0.25rem 0;
+      padding: 0.25rem;
+      border-radius: 5px;
+      background: #e0f2fe;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  </style>
 </head>
 <body>
-  <h2>Family Calendar (Next 2 Weeks)</h2>
-  <div class="weekday-header" id="weekdayHeader"></div>
-  <div class="calendar" id="calendar"></div>
+  <h1>Family Calendar (2 Weeks)</h1>
+  <div id="calendar" class="calendar"></div>
 
+  <!-- ical.js library to parse ICS data -->
+  <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
   <script>
-    const ICS_URL = 'https://p51-caldav.icloud.com/published/2/MjA1NjM3OTEwMjA1NjM3OZ1hydMA4RsyOGDzDwl5fOSE-BXIjEFdxp0IJAK66ZYo4mi8I4hWEVhDJV8NycFR5nGKQ7Oo4kQtXBg3BjExcVs'; // Replace with your calendar feed URL
+    const icsUrl = "https://p51-caldav.icloud.com/published/2/MjA1NjM3OTEwMjA1NjM3OZ1hydMA4RsyOGDzDwl5fOSE-BXIjEFdxp0IJAK66ZYo4mi8I4hWEVhDJV8NycFR5nGKQ7Oo4kQtXBg3BjExcVs";
 
     async function loadCalendar() {
-      const res = await fetch(ICS_URL);
-      const text = await res.text();
-      const events = parseICS(text);
-      renderCalendar(events);
-    }
-
-    function parseICS(ics) {
-      const events = [];
-      const lines = ics.split(/\r?\n/);
-      let event = null;
-      for (let line of lines) {
-        if (line.startsWith('BEGIN:VEVENT')) event = {};
-        else if (line.startsWith('END:VEVENT')) {
-          if (event) events.push(event);
-          event = null;
-        } else if (event) {
-          if (line.startsWith('SUMMARY:')) event.summary = line.replace('SUMMARY:', '').trim();
-          if (line.startsWith('DTSTART')) event.start = parseDate(line);
-        }
+      try {
+        const res = await fetch(icsUrl);
+        const data = await res.text();
+        const jcalData = ICAL.parse(data);
+        const comp = new ICAL.Component(jcalData);
+        const events = comp.getAllSubcomponents("vevent").map(e => new ICAL.Event(e));
+        renderCalendar(events);
+      } catch (err) {
+        console.error("Failed to load calendar:", err);
+        document.getElementById("calendar").innerHTML =
+          "<p>Could not load calendar data. Check if your iCloud link is public and starts with https://</p>";
       }
-      return events
-        .filter(e => e.start >= new Date() && e.start <= addDays(new Date(), 14))
-        .sort((a, b) => a.start - b.start);
-    }
-
-    function parseDate(line) {
-      const dt = line.split(':')[1];
-      return new Date(dt);
-    }
-
-    function addDays(date, days) {
-      const d = new Date(date);
-      d.setDate(d.getDate() + days);
-      return d;
-    }
-
-    function getMemberClass(title) {
-      const t = title.toLowerCase();
-      if (t.includes('maren')) return 'maren';
-      if (t.includes('callan')) return 'callan';
-      if (t.includes('mom')) return 'mom';
-      if (t.includes('dad')) return 'dad';
-      return 'default';
     }
 
     function renderCalendar(events) {
-      const container = document.getElementById('calendar');
-      const header = document.getElementById('weekdayHeader');
+      const calendarDiv = document.getElementById("calendar");
       const today = new Date();
-      const days = [...Array(14).keys()].map(i => addDays(today, i));
+      const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 13);
 
-      // Weekday header (Mon–Sun)
-      const weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-      header.innerHTML = weekdays.map(d => `<div>${d}</div>`).join('');
-
-      container.innerHTML = days.map(d => {
-        const dayEvents = events.filter(e => e.start.toDateString() === d.toDateString());
-        const formattedDate = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-        return `
-          <div class="day">
-            <div class="date">${formattedDate}</div>
-            ${dayEvents.length ? dayEvents.map(e =>
-              `<div class="event ${getMemberClass(e.summary)}">${e.summary}</div>`
-            ).join('') : `<div class="event default">No events</div>`}
-          </div>
-        `;
-      }).join('');
+      // Create two-week grid (2 rows of 7)
+      let html = "";
+      for (let i = 0; i < 14; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        const dayEvents = events.filter(ev => {
+          const evDate = ev.startDate.toJSDate();
+          return evDate.toDateString() === date.toDateString();
+        });
+        html += `<div class="day">
+          <div class="date">${date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</div>
+          ${dayEvents.map(e => `<div class="event">${e.summary}</div>`).join("") || "<div class='event' style='background:none;color:#999;'>—</div>"}
+        </div>`;
+      }
+      calendarDiv.innerHTML = html;
     }
 
     loadCalendar();
