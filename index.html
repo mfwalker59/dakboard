@@ -57,12 +57,15 @@
   <h1>Family Calendar (2 Weeks)</h1>
   <div id="calendar" class="calendar"></div>
 
+  <!-- ical.js library to parse ICS -->
   <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
   <script>
+    // Public iCloud ICS link
     const icsUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(
       "https://p51-caldav.icloud.com/published/2/MjA1NjM3OTEwMjA1NjM3OZ1hydMA4RsyOGDzDwl5fOSE-BXIjEFdxp0IJAK66ZYo4mi8I4hWEVhDJV8NycFR5nGKQ7Oo4kQtXBg3BjExcVs"
     );
 
+    // Map initials to color classes
     const colorMap = {
       "KW": "KW",
       "MW": "MW",
@@ -81,16 +84,18 @@
       } catch (err) {
         console.error("Failed to load calendar:", err);
         document.getElementById("calendar").innerHTML =
-          "<p>Could not load calendar data. Make sure your iCloud link is public and uses https://</p>";
+          "<p>Could not load calendar data. Check your ICS link.</p>";
       }
     }
 
+    // Get color class based on initials
     function getColorClass(summary) {
       if (!summary) return "other";
       const initials = summary.split(" ")[0].toUpperCase(); // first word
       return colorMap[initials] || "other";
     }
 
+    // Format time like "3:00 PM"
     function formatTime(icalDate) {
       const d = icalDate.toJSDate();
       return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -105,6 +110,7 @@
       for (let i = 0; i < 14; i++) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + i);
+
         const dayEvents = events.filter(ev => {
           const evDate = ev.startDate.toJSDate();
           return evDate.toDateString() === date.toDateString();
