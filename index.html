@@ -19,7 +19,6 @@
     .calendar {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      grid-auto-rows: 1fr;
       gap: 0.75rem;
     }
     .day {
@@ -30,7 +29,8 @@
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      height: 180px;
+      height: 200px;
+      overflow: hidden;
     }
     .date {
       font-weight: bold;
@@ -39,23 +39,36 @@
     .event {
       font-size: 0.85rem;
       margin: 0.25rem 0;
-      padding: 0.25rem;
+      padding: 0.25rem 0.4rem;
       border-radius: 5px;
-      background: #e0f2fe;
+      color: #fff;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    .KW { background: #ec4899; }   /* Kelsey - pink */
+    .MW { background: #2563eb; }   /* Michael - blue */
+    .CW { background: #22c55e; }   /* Callan - green */
+    .MCW { background: #f97316; }  /* Maren - orange */
+    .other { background: #94a3b8; } /* fallback gray */
   </style>
 </head>
 <body>
   <h1>Family Calendar (2 Weeks)</h1>
   <div id="calendar" class="calendar"></div>
 
-  <!-- ical.js library to parse ICS data -->
   <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
   <script>
-    const icsUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://p51-caldav.icloud.com/published/2/....");
+    const icsUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(
+      "https://p51-caldav.icloud.com/published/2/MjA1NjM3OTEwMjA1NjM3OZ1hydMA4RsyOGDzDwl5fOSE-BXIjEFdxp0IJAK66ZYo4mi8I4hWEVhDJV8NycFR5nGKQ7Oo4kQtXBg3BjExcVs"
+    );
+
+    const colorMap = {
+      "KW": "KW",
+      "MW": "MW",
+      "CW": "CW",
+      "MCW": "MCW"
+    };
 
     async function loadCalendar() {
       try {
@@ -68,18 +81,26 @@
       } catch (err) {
         console.error("Failed to load calendar:", err);
         document.getElementById("calendar").innerHTML =
-          "<p>Could not load calendar data. Check if your iCloud link is public and starts with https://</p>";
+          "<p>Could not load calendar data. Make sure your iCloud link is public and uses https://</p>";
       }
+    }
+
+    function getColorClass(summary) {
+      if (!summary) return "other";
+      const initials = summary.split(" ")[0].toUpperCase(); // first word
+      return colorMap[initials] || "other";
+    }
+
+    function formatTime(icalDate) {
+      const d = icalDate.toJSDate();
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
     function renderCalendar(events) {
       const calendarDiv = document.getElementById("calendar");
       const today = new Date();
       const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 13);
 
-      // Create two-week grid (2 rows of 7)
       let html = "";
       for (let i = 0; i < 14; i++) {
         const date = new Date(startDate);
@@ -88,11 +109,16 @@
           const evDate = ev.startDate.toJSDate();
           return evDate.toDateString() === date.toDateString();
         });
+
         html += `<div class="day">
           <div class="date">${date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</div>
-          ${dayEvents.map(e => `<div class="event">${e.summary}</div>`).join("") || "<div class='event' style='background:none;color:#999;'>—</div>"}
+          ${dayEvents.map(e => {
+            const time = formatTime(e.startDate);
+            return `<div class="event ${getColorClass(e.summary)}">${time} - ${e.summary}</div>`;
+          }).join("") || "<div class='event other' style='background:none;color:#999;'>—</div>"}
         </div>`;
       }
+
       calendarDiv.innerHTML = html;
     }
 
