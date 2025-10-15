@@ -102,19 +102,36 @@
     }
 
     function renderCalendar(events) {
-      const calendarDiv = document.getElementById("calendar");
-      const today = new Date();
-      const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const calendarDiv = document.getElementById("calendar");
+  const today = new Date();
+  const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-      let html = "";
-      for (let i = 0; i < 14; i++) {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + i);
+  let html = "";
+  for (let i = 0; i < 14; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + i);
 
-        const dayEvents = events.filter(ev => {
-          const evDate = ev.startDate.toJSDate();
-          return evDate.toDateString() === date.toDateString();
-        });
+    // filter events for this day
+    let dayEvents = events.filter(ev => {
+      const evDate = ev.startDate.toJSDate();
+      return evDate.toDateString() === date.toDateString();
+    });
+
+    // sort events by start time
+    dayEvents.sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate());
+
+    html += `<div class="day">
+      <div class="date">${date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</div>
+      ${dayEvents.map(e => {
+        const time = formatTime(e.startDate);
+        return `<div class="event ${getColorClass(e.summary)}">${time} - ${e.summary}</div>`;
+      }).join("") || "<div class='event other' style='background:none;color:#999;'>—</div>"}
+    </div>`;
+  }
+
+  calendarDiv.innerHTML = html;
+}
+
 
         html += `<div class="day">
           <div class="date">${date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</div>
