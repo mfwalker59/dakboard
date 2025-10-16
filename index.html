@@ -1,151 +1,520 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Family 2-Week Calendar</title>
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: #f8fafc;
-      margin: 0;
-      padding: 1rem;
-      color: #333;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 1rem;
-    }
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 0.75rem;
-    }
-    .day {
-      background: #fff;
-      border-radius: 10px;
-      padding: 0.5rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      height: 200px;
-      overflow: hidden;
-    }
-    .date {
-      font-weight: bold;
-      margin-bottom: 0.25rem;
-    }
-    .event {
-      font-size: 0.85rem;
-      margin: 0.25rem 0;
-      padding: 0.25rem 0.4rem;
-      border-radius: 5px;
-      color: #fff;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .KW { background: #ec4899; }   /* Kelsey - pink */
-    .MW { background: #2563eb; }   /* Michael - blue */
-    .CW { background: #22c55e; }   /* Callan - green */
-    .MCW { background: #f97316; }  /* Maren - orange */
-    .other { background: #94a3b8; } /* fallback gray */
-  </style>
-</head>
-<body>
-  <h1>Family Calendar (2 Weeks)</h1>
-  <div id="calendar" class="calendar"></div>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Family Wall Calendar — Tile View</title>
 
-  <!-- ical.js library to parse ICS -->
-  <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js"></script>
-  <script>
-    // Public iCloud ICS link
-    const icsUrl = "calendar.ics";
-
-    );
-
-    // Map initials to color classes
-    const colorMap = {
-      "KW": "KW",
-      "MW": "MW",
-      "CW": "CW",
-      "MCW": "MCW"
-    };
-
-    async function loadCalendar() {
-      try {
-        const res = await fetch(icsUrl);
-        const data = await res.text();
-        const jcalData = ICAL.parse(data);
-        const comp = new ICAL.Component(jcalData);
-        const events = comp.getAllSubcomponents("vevent").map(e => new ICAL.Event(e));
-        renderCalendar(events);
-      } catch (err) {
-        console.error("Failed to load calendar:", err);
-        document.getElementById("calendar").innerHTML =
-          "<p>Could not load calendar data. Check your ICS link.</p>";
-      }
-    }
-
-    // Get color class based on initials
-    function getColorClass(summary) {
-      if (!summary) return "other";
-      const initials = summary.split(" ")[0].toUpperCase(); // first word
-      return colorMap[initials] || "other";
-    }
-
-    // Format time like "3:00 PM"
-    function formatTime(icalDate) {
-      const d = icalDate.toJSDate();
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-
-    function renderCalendar(events) {
-  const calendarDiv = document.getElementById("calendar");
-  const today = new Date();
-  const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-  let html = "";
-  for (let i = 0; i < 14; i++) {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + i);
-
-    // filter events for this day
-    let dayEvents = events.filter(ev => {
-      const evDate = ev.startDate.toJSDate();
-      return evDate.toDateString() === date.toDateString();
-    });
-
-    // sort events by start time
-    dayEvents.sort((a, b) => a.startDate.toJSDate() - b.startDate.toJSDate());
-
-    html += `<div class="day">
-      <div class="date">${date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</div>
-      ${dayEvents.map(e => {
-        const time = formatTime(e.startDate);
-        return `<div class="event ${getColorClass(e.summary)}">${time} - ${e.summary}</div>`;
-      }).join("") || "<div class='event other' style='background:none;color:#999;'>—</div>"}
-    </div>`;
+<!-- Basic styling optimized for wall display -->
+<style>
+  :root{
+    --bg: #0b0f14;
+    --card-bg: #11151a;
+    --muted: #9aa5b1;
+    --accent: #00c2a8;
+    --tile-gap: 14px;
+    --tile-radius: 12px;
+    --tile-padding: 18px;
+    --title-size: clamp(20px, 2.6vw, 34px);
+    --time-size: clamp(14px, 1.8vw, 20px);
+    --initials-size: clamp(20px, 2.6vw, 36px);
+    color-scheme: dark;
   }
 
-  calendarDiv.innerHTML = html;
+  html,body{
+    height:100%;
+    margin:0;
+    background: linear-gradient(180deg,var(--bg) 0%, #071018 100%);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+
+  .wrap{
+    padding: 28px;
+    box-sizing:border-box;
+    max-width:1400px;
+    margin: 0 auto;
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom: 14px;
+  }
+  header h1{
+    margin:0;
+    color:#e6eef2;
+    font-size:20px;
+    letter-spacing:0.4px;
+  }
+  header .meta{
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  /* Grid for tiles */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--tile-gap);
+    align-items:start;
+  }
+
+  .tile{
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border: 1px solid rgba(255,255,255,0.04);
+    padding: var(--tile-padding);
+    border-radius: var(--tile-radius);
+    min-height:120px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    position:relative;
+    overflow:hidden;
+    box-shadow: 0 6px 24px rgba(2,6,10,0.6);
+    transition: transform .18s ease;
+  }
+
+  .tile:active{ transform: scale(.998); }
+
+  .tile .top{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+  }
+
+  .initials {
+    width:56px;
+    height:56px;
+    flex:0 0 56px;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-weight:700;
+    font-size: var(--initials-size);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.6);
+    text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+  }
+
+  .title{
+    color:#e6eef2;
+    font-size: var(--title-size);
+    margin:0;
+    line-height:1.05;
+    font-weight:700;
+    letter-spacing: -0.3px;
+  }
+  .subtitle{
+    color:var(--muted);
+    font-size: 14px;
+    margin-top:6px;
+  }
+
+  /* Time pill in top-right */
+  .time-pill{
+    position:absolute;
+    right:12px;
+    top:12px;
+    background: rgba(0,0,0,0.32);
+    color: #f8fbfd;
+    padding:6px 10px;
+    border-radius:999px;
+    font-size: var(--time-size);
+    font-weight:600;
+    border:1px solid rgba(255,255,255,0.04);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Location / extra details at bottom */
+  .extra{
+    margin-top:12px;
+    color:var(--muted);
+    font-size:13px;
+    display:flex;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+
+  /* Empty-state */
+  .empty{
+    color:var(--muted);
+    text-align:center;
+    padding:36px;
+    border-radius:12px;
+    border: 1px dashed rgba(255,255,255,0.03);
+  }
+
+  /* Colors for initials mapped to family */
+  .c-mw{ background: linear-gradient(180deg,#ff8a65,#ff7043); }
+  .c-kw{ background: linear-gradient(180deg,#4fc3f7,#29b6f6); }
+  .c-cw{ background: linear-gradient(180deg,#9fa8da,#7986cb); }
+  .c-mcw{ background: linear-gradient(180deg,#a5d6a7,#66bb6a); }
+  .c-other{ background: linear-gradient(180deg,#90a4ae,#607d8b); }
+
+  /* Big-screen tweaks */
+  @media (min-width:1200px){
+    .grid{ gap: 20px; }
+    .tile{ padding:24px; min-height:160px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Family Wall Calendar</h1>
+        <div class="meta">Tile view — initials, colored by member · optimized for wall / DAKboard</div>
+      </div>
+      <div class="meta">Events shown: <span id="rangeLabel">Next 7 days</span></div>
+    </header>
+
+    <main>
+      <div id="grid" class="grid" aria-live="polite">
+        <div class="empty" id="empty">Loading events…</div>
+      </div>
+    </main>
+
+    <footer style="margin-top:18px;color:var(--muted);font-size:13px;">
+      Pro tip: Publish this page with GitHub Pages and use the GitHub Pages URL as a custom page in DAKboard.
+    </footer>
+  </div>
+
+<script>
+/*
+  Configuration - EDIT THESE
+  - ICS_URL: the public .ics calendar URL (https://...). If Apple gives webcal://, replace with https://
+  - RANGE_DAYS: how many days ahead to show (0 = today only)
+  - ICS_PROXY: fallback proxy to overcome CORS if necessary (optional)
+*/
+const CONFIG = {
+  ICS_URL: "https://p51-caldav.icloud.com/published/2/MjA1NjM3OTEwMjA1NjM3OZ1hydMA4RsyOGDzDwl5fOSE-BXIjEFdxp0IJAK66ZYo4mi8I4hWEVhDJV8NycFR5nGKQ7Oo4kQtXBg3BjExcVs
+", // <- REPLACE with your public .ics URL
+  RANGE_DAYS: 7,   // show next 7 days
+  ICS_PROXY: "https://api.allorigins.win/raw?url=" // fallback; change if you have a private proxy
+};
+
+/* Family color mapping by initials (case-insensitive)
+   Update or add initials as needed.
+*/
+const MEMBER_COLORS = {
+  "MW": "c-mw",
+  "KW": "c-kw",
+  "CW": "c-cw",
+  "MCW": "c-mcw"
+};
+
+const grid = document.getElementById('grid');
+const empty = document.getElementById('empty');
+const rangeLabel = document.getElementById('rangeLabel');
+rangeLabel.textContent = `Next ${CONFIG.RANGE_DAYS} day${CONFIG.RANGE_DAYS===1?'':'s'}`;
+
+/* UTIL: Unfold folded ICS lines (RFC5545: lines beginning with space or tab belong to previous) */
+function unfoldICS(raw){
+  // Replace CRLF with \n for consistency
+  raw = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = raw.split("\n");
+  const out = [];
+  for (let i=0;i<lines.length;i++){
+    const line = lines[i];
+    if ((line.startsWith(" ") || line.startsWith("\t")) && out.length){
+      out[out.length - 1] += line.replace(/^[ \t]/, "");
+    } else {
+      out.push(line);
+    }
+  }
+  return out.join("\n");
 }
 
+/* Minimal ICS parser that extracts VEVENTs and their properties */
+function parseICS(raw){
+  raw = unfoldICS(raw);
+  const vevents = [];
+  const parts = raw.split(/BEGIN:VEVENT/i);
+  for (let i=1;i<parts.length;i++){
+    const part = "BEGIN:VEVENT\n" + parts[i];
+    const lines = part.split("\n");
+    const obj = {};
+    for (let line of lines){
+      if (!line || line.trim()==="") continue;
+      const idx = line.indexOf(':');
+      if (idx===-1) continue;
+      const nameAndParams = line.slice(0, idx);
+      const value = line.slice(idx+1);
+      const name = nameAndParams.split(';')[0].toUpperCase();
+      // store or append
+      if (!obj[name]) obj[name] = value;
+      else obj[name] += "\n" + value;
+    }
+    // only push if we have DTSTART and SUMMARY
+    if (obj['DTSTART'] && obj['SUMMARY']) vevents.push(obj);
+  }
+  return vevents;
+}
 
-        html += `<div class="day">
-          <div class="date">${date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</div>
-          ${dayEvents.map(e => {
-            const time = formatTime(e.startDate);
-            return `<div class="event ${getColorClass(e.summary)}">${time} - ${e.summary}</div>`;
-          }).join("") || "<div class='event other' style='background:none;color:#999;'>—</div>"}
-        </div>`;
-      }
+/* Parse RFC3339-ish / RFC5545 datetime strings to JS Date.
+   Handles:
+     - 20251015T210000Z  (UTC)
+     - 20251015T210000   (floating/local) -> treated as local time
+     - 2025-10-15T21:00:00Z (ISO)
+     - DATE-only 20251015 -> all-day (time omitted)
+*/
+function parseICSTime(s){
+  if (!s) return null;
+  // If ISO style already
+  if (s.includes('T') && s.includes('-')) {
+    // likely ISO; let Date handle it
+    const d = new Date(s);
+    if (!isNaN(d)) return d;
+  }
 
-      calendarDiv.innerHTML = html;
+  // Remove parameters like ;VALUE=DATE
+  s = s.split(';').slice(-1)[0];
+
+  // DATE-only (all-day)
+  if (/^\d{8}$/.test(s)){
+    const y = +s.slice(0,4), m = +s.slice(4,6), d = +s.slice(6,8);
+    return new Date(y, m-1, d);
+  }
+
+  // Basic format like 20251015T210000Z or without Z
+  const m = s.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z)?$/);
+  if (m){
+    if (m[7]==='Z'){
+      return new Date(Date.UTC(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]));
+    } else {
+      return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+    }
+  }
+
+  // Fallback
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+/* Format time for tile (e.g., "9:00 — 10:30", or "All day") */
+function formatEventTime(dtStart, dtEnd, isAllDay){
+  if (isAllDay) return "All day";
+  const opts = { hour:'numeric', minute:'2-digit' };
+  const start = new Intl.DateTimeFormat([], opts).format(dtStart);
+  if (!dtEnd) return start;
+  // If same date and times, show "start — end"
+  const end = new Intl.DateTimeFormat([], opts).format(dtEnd);
+  return `${start} — ${end}`;
+}
+
+/* Normalize summary to extract initials prefix if present, e.g. "[MW] Soccer" or "MW: Soccer"
+   We'll try to match at start of summary:
+     - [MW]
+     - (MW)
+     - MW:
+     - MW -
+   If no initial, fallback to first 2 letters of organizer or summary word.
+*/
+function extractInitials(summary){
+  if (!summary) return null;
+  const s = summary.trim();
+  const m = s.match(/^[\[\(]?([A-Za-z]{1,4})[\]\)\:\-\s]/);
+  if (m){
+    return m[1].toUpperCase();
+  }
+  // maybe initials at end within parentheses? ignore for now
+  // else try to get uppercase letters in beginning word
+  const firstWord = s.split(/\s+/)[0];
+  if (/^[A-Za-z]{1,4}$/.test(firstWord)) return firstWord.toUpperCase();
+  // fallback: take initials from first two words
+  const words = s.split(/\s+/).slice(0,2);
+  let initials = words.map(w=> w[0] ? w[0].toUpperCase() : '').join('');
+  return initials || null;
+}
+
+/* Build tile element */
+function buildTile(event){
+  const tile = document.createElement('article');
+  tile.className = 'tile';
+  const initials = extractInitials(event.SUMMARY) || '??';
+  const cls = MEMBER_COLORS[initials] || 'c-other';
+
+  const top = document.createElement('div');
+  top.className = 'top';
+
+  const init = document.createElement('div');
+  init.className = `initials ${cls}`;
+  init.textContent = initials;
+
+  const tbox = document.createElement('div');
+  tbox.style.flex = '1 1 auto';
+
+  const title = document.createElement('h2');
+  title.className = 'title';
+  // strip initials from summary when present
+  let displayTitle = event.SUMMARY.replace(/^[\[\(]?[A-Za-z]{1,4}[\]\)\:\-\s]+/, '').trim();
+  if (!displayTitle) displayTitle = event.SUMMARY;
+  title.textContent = displayTitle;
+
+  const sub = document.createElement('div');
+  sub.className = 'subtitle';
+  // optional: show date label for multi-day range or if not today
+  if (event._isAllDay) {
+    sub.textContent = (event._startOnlyDate) ? formatDateShort(event._dtstart) : '';
+  } else {
+    // if DTSTART not today, show date
+    const today = new Date();
+    if (!isSameDate(event._dtstart, today)) sub.textContent = formatDateShort(event._dtstart);
+    else sub.textContent = '';
+  }
+
+  tbox.appendChild(title);
+  if (sub.textContent) tbox.appendChild(sub);
+
+  top.appendChild(init);
+  top.appendChild(tbox);
+  tile.appendChild(top);
+
+  // time pill
+  const timeP = document.createElement('div');
+  timeP.className = 'time-pill';
+  timeP.textContent = event._timeLabel || '';
+  tile.appendChild(timeP);
+
+  // extras: location / description snippet
+  const extras = document.createElement('div');
+  extras.className = 'extra';
+  if (event.LOCATION) {
+    const loc = document.createElement('div');
+    loc.textContent = event.LOCATION;
+    extras.appendChild(loc);
+  }
+  if (event.DESCRIPTION) {
+    const desc = document.createElement('div');
+    desc.textContent = event.DESCRIPTION.split(/\n/)[0].slice(0,120);
+    extras.appendChild(desc);
+  }
+  tile.appendChild(extras);
+
+  return tile;
+}
+
+function isSameDate(a,b){
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+function formatDateShort(d){
+  return new Intl.DateTimeFormat([], { weekday:'short', month:'short', day:'numeric' }).format(d);
+}
+
+/* Filter and enrich events */
+function prepareEvents(vevents){
+  const now = new Date();
+  // lower bound: start of today
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endRange = new Date(startOfToday.getTime() + CONFIG.RANGE_DAYS * 24*60*60*1000);
+  const out = [];
+
+  for (const e of vevents){
+    const dtstart = parseICSTime(e.DTSTART);
+    let dtend = e.DTEND ? parseICSTime(e.DTEND) : null;
+
+    // Some ICS stores all-day events with DTSTART and no DTEND or equal date; treat as all-day if VALUE=DATE or no time portion
+    const isAllDay = /VALUE=DATE/i.test((e.DTSTART || '')) || (e.DTSTART && /^\d{8}$/.test(e.DTSTART.split(';').pop()));
+
+    // normalization: if dtend exists and is same as dtstart for all-day, keep dtend null and mark as single-day all-day
+    let startOnlyDate = false;
+    if (isAllDay && dtstart){
+      startOnlyDate = true;
+      // note: some calendars set DTEND to next day for all-day events; keep dtend but label as all-day
     }
 
-    loadCalendar();
-  </script>
+    if (!dtstart) continue;
+
+    // keep events that overlap [startOfToday, endRange)
+    const evStart = dtstart;
+    const evEnd = dtend || new Date(evStart.getTime() + (isAllDay ? 24*60*60*1000 : 60*60*1000));
+    if (evEnd > startOfToday && evStart < endRange){
+      e._dtstart = dtstart;
+      e._dtend = dtend;
+      e._isAllDay = isAllDay;
+      e._startOnlyDate = startOnlyDate;
+      e._timeLabel = formatEventTime(dtstart, dtend, isAllDay);
+      out.push(e);
+    }
+  }
+
+  // sort by start time
+  out.sort((a,b) => a._dtstart - b._dtstart);
+  return out;
+}
+
+/* Attempt to fetch ICS directly, else fallback to proxy. */
+async function fetchICS(url){
+  // Remove webcal:// if present
+  if (url.startsWith('webcal://')) url = 'https://' + url.slice(9);
+  try {
+    const r = await fetch(url, {cache:'no-cache'});
+    if (!r.ok) throw new Error('Network response not ok: '+r.status);
+    const txt = await r.text();
+    return txt;
+  } catch (err) {
+    console.warn("Direct fetch failed, trying proxy fallback:", err);
+    if (!CONFIG.ICS_PROXY) throw err;
+    // encode and fetch via proxy
+    const prox = CONFIG.ICS_PROXY + encodeURIComponent(url);
+    const r2 = await fetch(prox, {cache:'no-cache'});
+    if (!r2.ok) throw new Error('Proxy response not ok: '+r2.status);
+    return await r2.text();
+  }
+}
+
+/* Main render flow */
+async function loadAndRender(){
+  try {
+    const raw = await fetchICS(CONFIG.ICS_URL);
+    if (!raw || !raw.includes('BEGIN:VCALENDAR')){
+      throw new Error('Content does not look like an ICS calendar.');
+    }
+    const vevents = parseICS(raw);
+    const events = prepareEvents(vevents);
+    renderEvents(events);
+  } catch (err) {
+    console.error(err);
+    empty.textContent = "Failed to load calendar. Check the ICS URL and CORS/proxy settings. See console for details.";
+  }
+}
+
+/* Render into grid */
+function renderEvents(events){
+  grid.innerHTML = '';
+  if (!events || events.length===0){
+    const nod = document.createElement('div');
+    nod.className = 'empty';
+    nod.textContent = 'No events found in the chosen range.';
+    grid.appendChild(nod);
+    return;
+  }
+
+  for (const ev of events){
+    const tile = buildTile(ev);
+    grid.appendChild(tile);
+  }
+}
+
+/* Kick off */
+if (!CONFIG.ICS_URL || CONFIG.ICS_URL.includes('example.com')) {
+  empty.textContent = 'Please edit CONFIG.ICS_URL in the script to the public .ics URL for your shared Apple calendar.';
+} else {
+  loadAndRender();
+}
+
+/* OPTIONAL: auto-refresh every 5 minutes to keep wall up-to-date */
+setInterval(() => {
+  // simple refresh
+  loadAndRender();
+}, 5 * 60 * 1000);
+
+</script>
 </body>
 </html>
